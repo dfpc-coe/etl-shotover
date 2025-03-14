@@ -2,13 +2,6 @@ import { Static, Type, TSchema } from '@sinclair/typebox';
 import type { Event } from '@tak-ps/etl';
 import ETL, { SchemaType, handler as internal, local, InputFeature, InputFeatureCollection, DataFlowType, InvocationType } from '@tak-ps/etl';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars --  Fetch with an additional Response.typed(TypeBox Object) definition
-import { fetch } from '@tak-ps/etl';
-
-/**
- * The Input Schema contains the environment object that will be requested via the CloudTAK UI
- * It should be a valid TypeBox object - https://github.com/sinclairzx81/typebox
- */
 const InputSchema = Type.Object({
     'DEBUG': Type.Boolean({
         default: false,
@@ -16,16 +9,13 @@ const InputSchema = Type.Object({
     })
 });
 
-/**
- * The Output Schema contains the known properties that will be returned on the
- * GeoJSON Feature in the .properties.metdata object
- */
-const OutputSchema = Type.Object({})
+const IncomingInput = Type.Object({})
+const OutgoingInput = Type.Object({})
 
 export default class Task extends ETL {
-    static name = 'default'
-    static flow = [ DataFlowType.Incoming ];
-    static invocation = [ InvocationType.Schedule ];
+    static name = 'etl-shotover'
+    static flow = [ DataFlowType.Incoming, DataFlowType.Outgoing ];
+    static invocation = [ ];
 
     async schema(
         type: SchemaType = SchemaType.Input,
@@ -33,24 +23,23 @@ export default class Task extends ETL {
     ): Promise<TSchema> {
         if (flow === DataFlowType.Incoming) {
             if (type === SchemaType.Input) {
-                return InputSchema;
+                return IncomingInput;
             } else {
-                return OutputSchema;
+                return Type.Object({});
             }
-        } else {
-            return Type.Object({});
+       } else if (flow === DataFlowType.Outgoing) {
+            if (type === SchemaType.Input) {
+                return OutgoingInput;
+            } else {
+                return Type.Object({});
+            }
         }
     }
 
-    async control(): Promise<void> {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Get the Environment from the Server and ensure it conforms to the schema
-        const env = await this.env(InputSchema);
+    async outgoing(event: Lambda.SQSEvent): Promise<boolean> {
+        await this.env(OutgoingInput, DataFlowType.Outgoing);
 
-        const features: Static<typeof InputFeature>[] = [];
-
-        // Get things here and convert them to GeoJSON Feature Collections
-        // That conform to the node-cot Feature properties spec
-        // https://github.com/dfpc-coe/node-CoT/
+        console.error('EVENT', JSON.stringify(event));
 
         const fc: Static<typeof InputFeatureCollection> = {
             type: 'FeatureCollection',
@@ -58,6 +47,8 @@ export default class Task extends ETL {
         }
 
         await this.submit(fc);
+
+        return true;
     }
 }
 
