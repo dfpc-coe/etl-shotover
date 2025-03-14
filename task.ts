@@ -1,21 +1,20 @@
 import { Static, Type, TSchema } from '@sinclair/typebox';
 import type { Event } from '@tak-ps/etl';
-import ETL, { SchemaType, handler as internal, local, InputFeature, InputFeatureCollection, DataFlowType, InvocationType } from '@tak-ps/etl';
+import type Lambda from 'aws-lambda';
+import ETL, { SchemaType, handler as internal, local, InputFeatureCollection, DataFlowType, InvocationType } from '@tak-ps/etl';
 
-const InputSchema = Type.Object({
+const IncomingInput = Type.Object({
     'DEBUG': Type.Boolean({
         default: false,
         description: 'Print results in logs'
     })
-});
-
-const IncomingInput = Type.Object({})
+})
 const OutgoingInput = Type.Object({})
 
 export default class Task extends ETL {
     static name = 'etl-shotover'
     static flow = [ DataFlowType.Incoming, DataFlowType.Outgoing ];
-    static invocation = [ ];
+    static invocation = [ InvocationType.Schedule ];
 
     async schema(
         type: SchemaType = SchemaType.Input,
@@ -43,7 +42,7 @@ export default class Task extends ETL {
 
         const fc: Static<typeof InputFeatureCollection> = {
             type: 'FeatureCollection',
-            features: features
+            features: []
         }
 
         await this.submit(fc);
