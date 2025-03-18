@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v1.2.0
+
+- :rocket: Add input settings
+
 ### v1.1.1
 
 - :bug: Fix TS build

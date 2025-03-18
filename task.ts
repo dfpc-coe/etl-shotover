@@ -9,7 +9,21 @@ const IncomingInput = Type.Object({
         description: 'Print results in logs'
     })
 })
-const OutgoingInput = Type.Object({})
+
+const OutgoingInput = Type.Object({
+    Passthrough: Type.Boolean({
+        description: 'Pass unmatched COT markers through unchanged',
+        default: true,
+    }),
+    AugmentedMarkers: Type.Array(Type.Object({
+        UID: Type.String(),
+        LeaseID: Type.String(),
+        RotateReadCredsFreq: Type.String({
+            default: 'Never',
+            options: ['Never']
+        })
+    }))
+})
 
 export default class Task extends ETL {
     static name = 'etl-shotover'
