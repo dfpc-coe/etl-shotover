@@ -1,5 +1,6 @@
 import { Static, Type, TSchema } from '@sinclair/typebox';
 import type { Event } from '@tak-ps/etl';
+import CoT from '@tak-ps/node-cot';
 import type Lambda from 'aws-lambda';
 import ETL, { SchemaType, handler as internal, local, InputFeatureCollection, DataFlowType, InvocationType } from '@tak-ps/etl';
 
@@ -22,6 +23,8 @@ const OutgoingInput = Type.Object({
             default: 'Never',
             options: ['Never']
         })
+    }, {
+        default: []
     }))
 })
 
@@ -50,13 +53,26 @@ export default class Task extends ETL {
     }
 
     async outgoing(event: Lambda.SQSEvent): Promise<boolean> {
-        await this.env(OutgoingInput, DataFlowType.Outgoing);
-
-        console.error('EVENT', JSON.stringify(event));
+        const env = await this.env(OutgoingInput, DataFlowType.Outgoing);
 
         const fc: Static<typeof InputFeatureCollection> = {
             type: 'FeatureCollection',
             features: []
+        }
+        for (const record of event.Records) {
+            const parsed = (JSON.parse(record.body) as {
+                xml: string
+            }).xml;
+
+            const cot = new CoT(parsed);
+
+            for (const AugmentedMarker of env.AugmentedMarkers) {
+                if (cot.uid() === AugmentedMarker.UID) {
+                    console.error('MATCH', AugmentedMarker);
+                }
+            }
+
+            fc.features.push(cot.to_geojson());
         }
 
         await this.submit(fc);
