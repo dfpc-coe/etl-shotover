@@ -66,6 +66,7 @@ export default class Task extends ETL {
 
             const cot = new CoT(parsed);
 
+            console.error('INCOMING', cot.uid(), env.AugmentedMarkers)
             for (const AugmentedMarker of env.AugmentedMarkers) {
                 if (cot.uid() === AugmentedMarker.UID) {
                     console.error('MATCH', AugmentedMarker);
