@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v1.3.2
+
+- :bug: Fix default array bug
+
 ### v1.3.1
 
 - :rocket: More Debug Logging

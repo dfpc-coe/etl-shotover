@@ -23,9 +23,9 @@ const OutgoingInput = Type.Object({
             default: 'Never',
             options: ['Never']
         })
-    }, {
+    }), {
         default: []
-    }))
+    })
 })
 
 export default class Task extends ETL {
