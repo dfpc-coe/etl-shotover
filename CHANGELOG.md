@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v1.4.0
+
+- :rocket: Get Lease Info
+
 ### v1.3.2
 
 - :bug: Fix default array bug

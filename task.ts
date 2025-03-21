@@ -20,8 +20,10 @@ const OutgoingInput = Type.Object({
         UID: Type.String(),
         LeaseID: Type.String(),
         RotateReadCredsFreq: Type.String({
-            default: 'Never',
-            options: ['Never']
+            enum: [
+                'Never'
+            ],
+            default: 'Never'
         })
     }), {
         default: []
@@ -53,12 +55,14 @@ export default class Task extends ETL {
     }
 
     async outgoing(event: Lambda.SQSEvent): Promise<boolean> {
+        const layer = await this.fetchLayer();
         const env = await this.env(OutgoingInput, DataFlowType.Outgoing);
 
         const fc: Static<typeof InputFeatureCollection> = {
             type: 'FeatureCollection',
             features: []
         }
+
         for (const record of event.Records) {
             const parsed = (JSON.parse(record.body) as {
                 xml: string
@@ -66,10 +70,10 @@ export default class Task extends ETL {
 
             const cot = new CoT(parsed);
 
-            console.error('INCOMING', cot.uid(), env.AugmentedMarkers)
             for (const AugmentedMarker of env.AugmentedMarkers) {
                 if (cot.uid() === AugmentedMarker.UID) {
-                    console.error('MATCH', AugmentedMarker);
+                    const lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${AugmentedMarker.LeaseID}`);
+                    console.error('LEASE', lease);
                 }
             }
 
