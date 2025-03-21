@@ -70,8 +70,11 @@ export default class Task extends ETL {
 
             const cot = new CoT(parsed);
 
+            console.error('Recieved', cot.uid());
+
             for (const AugmentedMarker of env.AugmentedMarkers) {
                 if (cot.uid() === AugmentedMarker.UID) {
+                    console.error('MATCH', cot.uid, AugmentedMarker.UID);
                     const lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${AugmentedMarker.LeaseID}`);
                     console.error('LEASE', lease);
                 }

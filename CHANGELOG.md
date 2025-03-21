@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v1.4.1
+
+- :rocket: Add debug code
+
 ### v1.4.0
 
 - :rocket: Get Lease Info
