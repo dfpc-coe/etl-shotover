@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v1.5.0
+
+- :rocket: Setup addVideo Call
+
 ### v1.4.1
 
 - :rocket: Add debug code

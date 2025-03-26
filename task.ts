@@ -63,25 +63,50 @@ export default class Task extends ETL {
             features: []
         }
 
+        const records: Array<Promise<void>> = [];
         for (const record of event.Records) {
-            const parsed = (JSON.parse(record.body) as {
-                xml: string
-            }).xml;
+            records.push((async (record) => {
+                const parsed = (JSON.parse(record.body) as {
+                    xml: string
+                }).xml;
 
-            const cot = new CoT(parsed);
+                const cot = new CoT(parsed);
 
-            console.error('Recieved', cot.uid());
+                console.error('Recieved', cot.uid());
 
-            for (const AugmentedMarker of env.AugmentedMarkers) {
-                if (cot.uid() === AugmentedMarker.UID) {
-                    console.error('MATCH', cot.uid, AugmentedMarker.UID);
-                    const lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${AugmentedMarker.LeaseID}`);
-                    console.error('LEASE', lease);
+                for (const AugmentedMarker of env.AugmentedMarkers) {
+                    if (cot.uid() === AugmentedMarker.UID) {
+                        const lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${AugmentedMarker.LeaseID}`) as {
+                            lease: {
+                                id: number;
+                                read_user: string;
+                                read_pass: string;
+                            }
+                            protocols: {
+                                rtsp: {
+                                    name: string
+                                    url: string    
+                                }
+                            }
+                        };
+
+                        if (lease.protocols.rtsp) {
+                            cot.addVideo({
+                                uid: cot.uid() + '-video',
+                                url: lease.protocols.rtsp.url
+                                    .replace('{{mode}}', 'read')
+                                    .replace('{{username}}', lease.lease.read_user)
+                                    .replace('{{password}}', lease.lease.read_pass)
+                            });
+                        }
+                    }
                 }
-            }
 
-            fc.features.push(cot.to_geojson());
+                fc.features.push(cot.to_geojson());
+            })(record));
         }
+
+        await Promise.allSettled(records);
 
         await this.submit(fc);
 
