@@ -72,10 +72,11 @@ export default class Task extends ETL {
 
                 const cot = new CoT(parsed);
 
-                console.error('Recieved', cot.uid());
-
+                let matched = false;
                 for (const AugmentedMarker of env.AugmentedMarkers) {
                     if (cot.uid() === AugmentedMarker.UID) {
+                        matched = true;
+
                         const lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${AugmentedMarker.LeaseID}`) as {
                             lease: {
                                 id: number;
@@ -85,7 +86,7 @@ export default class Task extends ETL {
                             protocols: {
                                 rtsp: {
                                     name: string
-                                    url: string    
+                                    url: string
                                 }
                             }
                         };
@@ -102,7 +103,9 @@ export default class Task extends ETL {
                     }
                 }
 
-                fc.features.push(cot.to_geojson());
+                if (matched || env.Passthrough) {
+                    fc.features.push(cot.to_geojson());
+                }
             })(record));
         }
 

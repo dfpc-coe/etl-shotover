@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v1.6.0
+
+- :rocket: Respect Passthrough
+
 ### v1.5.0
 
 - :rocket: Setup addVideo Call
