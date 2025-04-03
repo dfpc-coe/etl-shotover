@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v1.7.0
+
+- :rocket: Add additional debug code
+
 ### v1.6.0
 
 - :rocket: Respect Passthrough
