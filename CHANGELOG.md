@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v2.1.4
+
+- :bug: Fix Types
+
 ### v2.1.3
 
 - :bug: Include Username/Password in RTSP URL

@@ -43,9 +43,9 @@ export default class Task extends ETL {
         for (const marker of env.AugmentedMarkers) {
             let lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${marker.LeaseID}`, {
                 method: 'GET'
-            }) as { read_user?: string, read_pass?: string, protocols: { rtsp?: { name: string, url: string } } }
+            }) as { lease: { read_user?: string, read_pass?: string, }, protocols: { rtsp?: { name: string, url: string } } }
 
-            if (lease.read_user && lease.read_pass) {
+            if (lease.lease.read_user && lease.lease.read_pass) {
                 console.log(`ok - Rotating Read Password for ${marker.LeaseID}`);
                 lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${marker.LeaseID}`, {
                     method: 'PATCH',
@@ -55,7 +55,7 @@ export default class Task extends ETL {
                     body: JSON.stringify({
                         secret_rotate: true
                     })
-                }) as { read_user?: string, read_pass?: string, protocols: { rtsp?: { name: string, url: string } } }
+                }) as { lease: { read_user?: string, read_pass?: string, }, protocols: { rtsp?: { name: string, url: string } } }
             } else {
                 console.log(`ok - Skipping Rotation for ${marker.LeaseID}`);
             }
@@ -88,7 +88,7 @@ export default class Task extends ETL {
                     },
                     body: JSON.stringify({
                         uid: marker.UID,
-                        toInject: `__video url="${lease.protocols.rtsp.url.replace(/\{\{username\}\}/, lease.read_user).replace(/\{\{password\}\}/, lease.read_pass)}"`
+                        toInject: `__video url="${lease.protocols.rtsp.url.replace(/\{\{username\}\}/, lease.lease.read_user).replace(/\{\{password\}\}/, lease.lease.read_pass)}"`
                     })
                 })
             }
