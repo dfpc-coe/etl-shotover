@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v2.1.3
+
+- :bug: Include Username/Password in RTSP URL
+
 ### v2.1.2
 
 - :bug: Include lease postfix in API call

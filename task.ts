@@ -88,7 +88,7 @@ export default class Task extends ETL {
                     },
                     body: JSON.stringify({
                         uid: marker.UID,
-                        toInject: `__video url="${lease.protocols.rtsp.url}"`
+                        toInject: `__video url="${lease.protocols.rtsp.url.replace(/\{\{username\}\}/, lease.read_user).replace(/\{\{password\}\}/, lease.read_pass)}"`
                     })
                 })
             }
