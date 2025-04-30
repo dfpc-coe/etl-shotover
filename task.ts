@@ -5,26 +5,14 @@ import type Lambda from 'aws-lambda';
 import ETL, { SchemaType, handler as internal, local, InputFeatureCollection, DataFlowType, InvocationType } from '@tak-ps/etl';
 
 const IncomingInput = Type.Object({
-    'DEBUG': Type.Boolean({
+    DEBUG: Type.Boolean({
         default: false,
         description: 'Print results in logs'
-    })
-})
-
-const OutgoingInput = Type.Object({
-    Passthrough: Type.Boolean({
-        description: 'Pass unmatched COT markers through unchanged',
-        default: true,
     }),
+    AdminToken: Type.String(),
     AugmentedMarkers: Type.Array(Type.Object({
         UID: Type.String(),
         LeaseID: Type.String(),
-        RotateReadCredsFreq: Type.String({
-            enum: [
-                'Never'
-            ],
-            default: 'Never'
-        })
     }), {
         default: []
     })
@@ -32,7 +20,7 @@ const OutgoingInput = Type.Object({
 
 export default class Task extends ETL {
     static name = 'etl-shotover'
-    static flow = [ DataFlowType.Incoming, DataFlowType.Outgoing ];
+    static flow = [ DataFlowType.Incoming ];
     static invocation = [ InvocationType.Schedule ];
 
     async schema(
@@ -46,76 +34,20 @@ export default class Task extends ETL {
                 return Type.Object({});
             }
        } else if (flow === DataFlowType.Outgoing) {
-            if (type === SchemaType.Input) {
-                return OutgoingInput;
-            } else {
-                return Type.Object({});
-            }
+            return Type.Object({});
         }
     }
 
-    async outgoing(event: Lambda.SQSEvent): Promise<boolean> {
-        const layer = await this.fetchLayer();
-        const env = await this.env(OutgoingInput, DataFlowType.Outgoing);
-
-        const fc: Static<typeof InputFeatureCollection> = {
-            type: 'FeatureCollection',
-            features: []
-        }
-
-        const records: Array<Promise<void>> = [];
-        for (const record of event.Records) {
-            records.push((async (record) => {
-                const parsed = (JSON.parse(record.body) as {
-                    xml: string
-                }).xml;
-
-                const cot = new CoT(parsed);
-
-                console.error(new Date(), cot.callsign(), cot.raw.event._attributes.start)
-
-                let matched = false;
-                for (const AugmentedMarker of env.AugmentedMarkers) {
-                    if (cot.uid() === AugmentedMarker.UID) {
-                        matched = true;
-
-                        const lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${AugmentedMarker.LeaseID}`) as {
-                            lease: {
-                                id: number;
-                                read_user: string;
-                                read_pass: string;
-                            }
-                            protocols: {
-                                rtsp: {
-                                    name: string
-                                    url: string
-                                }
-                            }
-                        };
-
-                        if (lease.protocols.rtsp) {
-                            cot.addVideo({
-                                uid: cot.uid() + '-video',
-                                url: lease.protocols.rtsp.url
-                                    .replace('{{mode}}', 'read')
-                                    .replace('{{username}}', lease.lease.read_user)
-                                    .replace('{{password}}', lease.lease.read_pass)
-                            });
-                        }
-                    }
-                }
-
-                if (matched || env.Passthrough) {
-                    fc.features.push(cot.to_geojson());
-                }
-            })(record));
-        }
-
-        await Promise.allSettled(records);
-
-        await this.submit(fc);
-
-        return true;
+    async control() {
+/*
+        cot.addVideo({
+            uid: cot.uid() + '-video',
+            url: lease.protocols.rtsp.url
+                .replace('{{mode}}', 'read')
+                .replace('{{username}}', lease.lease.read_user)
+                .replace('{{password}}', lease.lease.read_pass)
+        });
+*/
     }
 }
 
