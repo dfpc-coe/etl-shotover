@@ -41,13 +41,13 @@ export default class Task extends ETL {
         const env = await this.env(IncomingInput);
 
         for (const marker of env.AugmentedMarkers) {
-            let lease = await this.fetch(`/api/connection/${layer.connection}/video/${marker.LeaseID}`, {
+            let lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${marker.LeaseID}`, {
                 method: 'GET'
             }) as { read_user?: string, read_pass?: string, protocols: { rtsp?: { name: string, url: string } } }
 
             if (lease.read_user && lease.read_pass) {
                 console.log(`ok - Rotating Read Password for ${marker.LeaseID}`);
-                lease = await this.fetch(`/api/connection/${layer.connection}/video/${marker.LeaseID}`, {
+                lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${marker.LeaseID}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json'
