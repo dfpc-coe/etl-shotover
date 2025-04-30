@@ -1,8 +1,6 @@
-import { Static, Type, TSchema } from '@sinclair/typebox';
+import { Type, TSchema } from '@sinclair/typebox';
 import type { Event } from '@tak-ps/etl';
-import CoT from '@tak-ps/node-cot';
-import type Lambda from 'aws-lambda';
-import ETL, { SchemaType, handler as internal, local, InputFeatureCollection, DataFlowType, InvocationType } from '@tak-ps/etl';
+import ETL, { SchemaType, handler as internal, local, DataFlowType, InvocationType } from '@tak-ps/etl';
 
 const IncomingInput = Type.Object({
     DEBUG: Type.Boolean({
@@ -39,15 +37,61 @@ export default class Task extends ETL {
     }
 
     async control() {
-/*
-        cot.addVideo({
-            uid: cot.uid() + '-video',
-            url: lease.protocols.rtsp.url
-                .replace('{{mode}}', 'read')
-                .replace('{{username}}', lease.lease.read_user)
-                .replace('{{password}}', lease.lease.read_pass)
-        });
-*/
+        const env = await this.env(IncomingInput);
+
+        for (const marker of env.AugmentedMarkers) {
+            let lease = await this.fetch(`/api/connection/video/${marker.LeaseID}`, {
+                method: 'GET'
+            }) as { read_user?: string, read_pass?: string, protocols: { rtsp?: { name: string, url: string } } }
+
+            if (lease.read_user && lease.read_pass) {
+                console.log(`ok - Rotating Read Password for ${marker.LeaseID}`);
+                lease = await this.fetch(`/api/connection/video/${marker.LeaseID}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        secret_rotate: true
+                    })
+                }) as { read_user?: string, read_pass?: string, protocols: { rtsp?: { name: string, url: string } } }
+            } else {
+                console.log(`ok - Skipping Rotation for ${marker.LeaseID}`);
+            }
+
+            const injectors = await this.fetch('/api/server/injector', {
+                headers: {
+                    Authorization: `Bearer ${env.AdminToken}`
+                }
+            }) as { items: Array<{ uid: string, toInject: string }> };
+
+            for (const injector of injectors.items) {
+                if (injector.uid === marker.UID) {
+                    console.log(`ok - Deleting Old Injector for ${marker.UID}`);
+
+                    await this.fetch(`/api/server/injector?uid=${encodeURIComponent(injector.uid)}&toInject=${encodeURIComponent(injector.toInject)}`, {
+                        method: 'DELETE',
+                        headers: {
+                            Authorization: `Bearer ${env.AdminToken}`
+                        }
+                    })
+                }
+            }
+
+            if (lease.protocols.rtsp) {
+                await this.fetch(`/api/server/injector`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${env.AdminToken}`
+                    },
+                    body: JSON.stringify({
+                        uid: marker.UID,
+                        toInject: `__video url="${lease.protocols.rtsp.url}"`
+                    })
+                })
+            }
+        }
     }
 }
 

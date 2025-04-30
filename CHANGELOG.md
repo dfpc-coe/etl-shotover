@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v2.1.0
+
+- :tada: High level sketch of API Operations
+
 ### v2.0.0
 
 - :tada: Begin converting to Injector Approach
