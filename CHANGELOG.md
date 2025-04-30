@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v2.1.1
+
+- :bug: Include Connection in API call
+
 ### v2.1.0
 
 - :tada: High level sketch of API Operations
