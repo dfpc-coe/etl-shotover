@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v2.0.0
+
+- :tada: Begin converting to Injector Approach
+
 ### v1.7.0
 
 - :rocket: Add additional debug code
