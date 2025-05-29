@@ -53,7 +53,7 @@ export default class Task extends ETL {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        secret_rotate: true
+                        secure_rotate: true
                     })
                 }) as { lease: { read_user?: string, read_pass?: string, }, protocols: { rtsp?: { name: string, url: string } } }
             } else {

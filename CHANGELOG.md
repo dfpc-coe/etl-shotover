@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v2.2.0
+
+- :bug: Fix Rotation call
+
 ### v2.1.4
 
 - :bug: Fix Types
