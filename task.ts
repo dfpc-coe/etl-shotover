@@ -40,59 +40,73 @@ export default class Task extends ETL {
         const layer = await this.fetchLayer()
         const env = await this.env(IncomingInput);
 
+        const errors: Error[] = [];
+
         for (const marker of env.AugmentedMarkers) {
-            let lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${marker.LeaseID}`, {
-                method: 'GET'
-            }) as { lease: { read_user?: string, read_pass?: string, }, protocols: { rtsp?: { name: string, url: string } } }
-
-            if (lease.lease.read_user && lease.lease.read_pass) {
-                console.log(`ok - Rotating Read Password for ${marker.LeaseID}`);
-                lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${marker.LeaseID}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        secure_rotate: true
-                    })
+            try {
+                let lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${marker.LeaseID}`, {
+                    method: 'GET'
                 }) as { lease: { read_user?: string, read_pass?: string, }, protocols: { rtsp?: { name: string, url: string } } }
-            } else {
-                console.log(`ok - Skipping Rotation for ${marker.LeaseID}`);
-            }
 
-            const injectors = await this.fetch('/api/server/injector', {
-                headers: {
-                    Authorization: `Bearer ${env.AdminToken}`
-                }
-            }) as { items: Array<{ uid: string, toInject: string }> };
-
-            for (const injector of injectors.items) {
-                if (injector.uid === marker.UID) {
-                    console.log(`ok - Deleting Old Injector for ${marker.UID}`);
-
-                    await this.fetch(`/api/server/injector?uid=${encodeURIComponent(injector.uid)}&toInject=${encodeURIComponent(injector.toInject)}`, {
-                        method: 'DELETE',
+                if (lease.lease.read_user && lease.lease.read_pass) {
+                    console.log(`ok - Rotating Read Password for ${marker.LeaseID}`);
+                    lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${marker.LeaseID}`, {
+                        method: 'PATCH',
                         headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            secure_rotate: true
+                        })
+                    }) as { lease: { read_user?: string, read_pass?: string, }, protocols: { rtsp?: { name: string, url: string } } }
+                } else {
+                    console.log(`ok - Skipping Rotation for ${marker.LeaseID}`);
+                }
+
+                const injectors = await this.fetch('/api/server/injector', {
+                    headers: {
+                        Authorization: `Bearer ${env.AdminToken}`
+                    }
+                }) as { items: Array<{ uid: string, toInject: string }> };
+
+                for (const injector of injectors.items) {
+                    if (injector.uid === marker.UID) {
+                        console.log(`ok - Deleting Old Injector for ${marker.UID}`);
+
+                        await this.fetch(`/api/server/injector?uid=${encodeURIComponent(injector.uid)}&toInject=${encodeURIComponent(injector.toInject)}`, {
+                            method: 'DELETE',
+                            headers: {
+                                Authorization: `Bearer ${env.AdminToken}`
+                            }
+                        })
+                    }
+                }
+
+                if (lease.protocols.rtsp) {
+                    await this.fetch(`/api/server/injector`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
                             Authorization: `Bearer ${env.AdminToken}`
-                        }
+                        },
+                        body: JSON.stringify({
+                            uid: marker.UID,
+                            toInject: `__video url="${lease.protocols.rtsp.url.replace(/\{\{username\}\}/, lease.lease.read_user).replace(/\{\{password\}\}/, lease.lease.read_pass)}"`
+                        })
                     })
                 }
-            }
-
-            if (lease.protocols.rtsp) {
-                await this.fetch(`/api/server/injector`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${env.AdminToken}`
-                    },
-                    body: JSON.stringify({
-                        uid: marker.UID,
-                        toInject: `__video url="${lease.protocols.rtsp.url.replace(/\{\{username\}\}/, lease.lease.read_user).replace(/\{\{password\}\}/, lease.lease.read_pass)}"`
-                    })
-                })
+            } catch (err) {
+                errors.push(err instanceof Error ? err : new Error(String(err)));
             }
         }
+
+        if (errors.length > 0) {
+            for (const error of errors) {
+                consle.error(error);
+            }
+        }
+
+        throw new Error(`${errors.length} errors occurred during processing.`);
     }
 }
 

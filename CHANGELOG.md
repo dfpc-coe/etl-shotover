@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v2.3.0
+
+- :rocket: Make API Calls more resilient
+
 ### v2.2.0
 
 - :bug: Fix Rotation call
