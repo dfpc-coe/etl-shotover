@@ -102,7 +102,7 @@ export default class Task extends ETL {
 
         if (errors.length > 0) {
             for (const error of errors) {
-                consle.error(error);
+                console.error(error);
             }
         }
 

@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v2.5.1
+
+- :bug: Fix Invalid use of console
+
 ### v2.5.0
 
 - :arrow_up: Update Core Deps
