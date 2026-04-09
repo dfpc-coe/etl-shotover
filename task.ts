@@ -34,6 +34,8 @@ export default class Task extends ETL {
        } else if (flow === DataFlowType.Outgoing) {
             return Type.Object({});
         }
+
+            return Type.Object({});
     }
 
     async control() {
@@ -82,7 +84,7 @@ export default class Task extends ETL {
                     }
                 }
 
-                if (lease.protocols.rtsp) {
+                if (lease.protocols.rtsp && lease.lease.read_user && lease.lease.read_pass) {
                     await this.fetch(`/api/server/injector`, {
                         method: 'POST',
                         headers: {
