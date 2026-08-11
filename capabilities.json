@@ -1,0 +1,32 @@
+{
+    "version": "1.0",
+    "name": "Shotover",
+    "description": "Rotates CloudTAK video lease credentials and maintains server video injectors so Shotover camera feeds stay available in TAK.",
+    "compute": {
+        "memory": 512,
+        "timeout": 60
+    },
+    "permissions": [
+        {
+            "resource": "video:*",
+            "required": true,
+            "description": "Reads and rotates video lease credentials for Shotover camera feeds"
+        },
+        {
+            "resource": "injector:*",
+            "required": true,
+            "description": "Creates and removes server video injectors for the rotated camera streams"
+        }
+    ],
+    "invocations": {
+        "incoming": {
+            "schedule": {
+                "description": "Rotates video lease credentials and refreshes server injectors on a schedule.",
+                "default": {
+                    "enabled": true,
+                    "schedule": "rate(1 minute)"
+                }
+            }
+        }
+    }
+}
