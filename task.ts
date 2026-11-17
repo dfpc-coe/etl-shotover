@@ -124,9 +124,9 @@ export default class Task extends ETL {
             for (const error of errors) {
                 console.error(error);
             }
-        }
 
-        throw new Error(`${errors.length} errors occurred during processing.`);
+            throw new Error(`${errors.length} errors occurred during processing.`);
+        }
     }
 }
 
