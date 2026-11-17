@@ -1,4 +1,5 @@
-import { Type, TSchema } from '@sinclair/typebox';
+import { Type, TSchema, Static } from '@sinclair/typebox';
+import { Value } from '@sinclair/typebox/value';
 import type { Event } from '@tak-ps/etl';
 import ETL, { SchemaType, handler as internal, local, DataFlowType, InvocationType } from '@tak-ps/etl';
 
@@ -16,6 +17,31 @@ const IncomingInput = Type.Object({
     })
 })
 
+const Lease = Type.Object({
+    lease: Type.Object({
+        read_user: Type.Optional(Type.Union([Type.Null(), Type.String()])),
+        read_pass: Type.Optional(Type.Union([Type.Null(), Type.String()]))
+    }),
+    protocols: Type.Object({
+        rtsp: Type.Optional(Type.Union([Type.Null(), Type.Object({
+            url: Type.String()
+        })]))
+    })
+});
+
+const Injectors = Type.Object({
+    items: Type.Array(Type.Object({
+        uid: Type.String(),
+        toInject: Type.String()
+    }))
+});
+
+function typed<T extends TSchema>(schema: T, body: unknown): Static<T> {
+    if (!Value.Check(schema, body)) throw new Error('Unexpected API response');
+
+    return body;
+}
+
 export default class Task extends ETL {
     static name = 'etl-shotover'
     static flow = [ DataFlowType.Incoming ];
@@ -25,17 +51,9 @@ export default class Task extends ETL {
         type: SchemaType = SchemaType.Input,
         flow: DataFlowType = DataFlowType.Incoming
     ): Promise<TSchema> {
-        if (flow === DataFlowType.Incoming) {
-            if (type === SchemaType.Input) {
-                return IncomingInput;
-            } else {
-                return Type.Object({});
-            }
-       } else if (flow === DataFlowType.Outgoing) {
-            return Type.Object({});
-        }
+        if (flow === DataFlowType.Incoming && type === SchemaType.Input) return IncomingInput;
 
-            return Type.Object({});
+        return Type.Object({});
     }
 
     async control() {
@@ -46,13 +64,13 @@ export default class Task extends ETL {
 
         for (const marker of env.AugmentedMarkers) {
             try {
-                let lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${marker.LeaseID}`, {
+                let lease = typed(Lease, await this.fetch(`/api/connection/${layer.connection}/video/lease/${marker.LeaseID}`, {
                     method: 'GET'
-                }) as { lease: { read_user?: string, read_pass?: string, }, protocols: { rtsp?: { name: string, url: string } } }
+                }));
 
                 if (lease.lease.read_user && lease.lease.read_pass) {
                     console.log(`ok - Rotating Read Password for ${marker.LeaseID}`);
-                    lease = await this.fetch(`/api/connection/${layer.connection}/video/lease/${marker.LeaseID}`, {
+                    lease = typed(Lease, await this.fetch(`/api/connection/${layer.connection}/video/lease/${marker.LeaseID}`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json'
@@ -60,16 +78,16 @@ export default class Task extends ETL {
                         body: JSON.stringify({
                             secure_rotate: true
                         })
-                    }) as { lease: { read_user?: string, read_pass?: string, }, protocols: { rtsp?: { name: string, url: string } } }
+                    }));
                 } else {
                     console.log(`ok - Skipping Rotation for ${marker.LeaseID}`);
                 }
 
-                const injectors = await this.fetch('/api/server/injector', {
+                const injectors = typed(Injectors, await this.fetch('/api/server/injector', {
                     headers: {
                         Authorization: `Bearer ${env.AdminToken}`
                     }
-                }) as { items: Array<{ uid: string, toInject: string }> };
+                }));
 
                 for (const injector of injectors.items) {
                     if (injector.uid === marker.UID) {
@@ -113,7 +131,7 @@ export default class Task extends ETL {
 }
 
 await local(await Task.init(import.meta.url), import.meta.url);
-export async function handler(event: Event = {}) {
-    return await internal(await Task.init(import.meta.url), event);
+export async function handler(event: Event = {}): ReturnType<typeof internal> {
+    return internal(await Task.init(import.meta.url), event);
 }
 
